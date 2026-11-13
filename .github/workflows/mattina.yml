@@ -3,6 +3,7 @@ name: Briefing Forex Mattutino
 on:
   schedule:
     - cron: '0 5 * * 1-5'
+    - cron: '0,30 6-20 * * 1-5'
   workflow_dispatch:
 
 jobs:
