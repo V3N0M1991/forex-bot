@@ -4,7 +4,10 @@ import yfinance as yf
 import pandas as pd
 
 COPPIE = ["EURUSD=X", "GBPUSD=X", "USDJPY=X", "EURJPY=X", "AUDUSD=X"]
-BASE_URL = "https://googleapis.com"
+BASE_URL = "https://" + "generativelanguage" + ".google" + "apis.com" + "/v1beta"
+
+
+
 
 def analizza_dati():
     riepilogo_tecnico = ""
