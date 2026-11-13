@@ -4,6 +4,7 @@ import yfinance as yf
 import pandas as pd
 
 COPPIE = ["EURUSD=X", "GBPUSD=X", "USDJPY=X", "EURJPY=X", "AUDUSD=X"]
+BASE_URL = "https://googleapis.com"
 
 def analizza_dati():
     riepilogo_tecnico = ""
@@ -42,7 +43,7 @@ def analizza_dati():
     return riepilogo_tecnico
 
 def trova_modello_gemini(api_key):
-    url_lista = f"https://googleapis.com{api_key}"
+    url_lista = f"{BASE_URL}/models?key={api_key}"
     try:
         res = requests.get(url_lista, timeout=15).json()
         for m in res.get("models", []):
@@ -59,10 +60,10 @@ def chiedi_a_gemini(dati):
         return "Nessun dato di mercato disponibile al momento (mercati chiusi o errore download)."
 
     api_key = os.environ["GEMINI_API_KEY"]
-    modello = trova_modello_gemini(api_key)
+    modello = trova_modello_gemini(api_key).lstrip("/")
     print("Modello selezionato:", modello)
 
-    url = f"https://googleapis.com{modello}:generateContent?key={api_key}"
+    url = f"{BASE_URL}/{modello}:generateContent?key={api_key}"
 
     prompt = (
         "Sei un analista Forex intraday esperto in timeframe bassi (M1, M5, M15) e struttura (H1, H4).\n"
