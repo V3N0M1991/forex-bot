@@ -18,7 +18,7 @@ jobs:
           python-version: '3.11'
 
       - name: Installa librerie
-        run: pip install requests yfinance pandas
+        run: pip install requests yfinance pandas google-genai
 
       - name: Esegui Bot
         env:
