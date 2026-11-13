@@ -2,12 +2,9 @@ import os
 import requests
 import yfinance as yf
 import pandas as pd
+from google import genai
 
 COPPIE = ["EURUSD=X", "GBPUSD=X", "USDJPY=X", "EURJPY=X", "AUDUSD=X"]
-BASE_URL = "https://" + "generativelanguage" + ".google" + "apis.com" + "/v1beta"
-
-
-
 
 def analizza_dati():
     riepilogo_tecnico = ""
@@ -45,28 +42,11 @@ def analizza_dati():
 
     return riepilogo_tecnico
 
-def trova_modello_gemini(api_key):
-    url_lista = f"{BASE_URL}/models?key={api_key}"
-    try:
-        res = requests.get(url_lista, timeout=15).json()
-        for m in res.get("models", []):
-            nome = m.get("name", "")
-            metodi = m.get("supportedGenerationMethods", [])
-            if "flash" in nome.lower() and "generateContent" in metodi:
-                return nome
-    except Exception as e:
-        print("Errore recupero modelli:", e)
-    return "models/gemini-2.5-flash"
-
 def chiedi_a_gemini(dati):
     if not dati:
         return "Nessun dato di mercato disponibile al momento (mercati chiusi o errore download)."
 
-    api_key = os.environ["GEMINI_API_KEY"]
-    modello = trova_modello_gemini(api_key).lstrip("/")
-    print("Modello selezionato:", modello)
-
-    url = f"{BASE_URL}/{modello}:generateContent?key={api_key}"
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
     prompt = (
         "Sei un analista Forex intraday esperto in timeframe bassi (M1, M5, M15) e struttura (H1, H4).\n"
@@ -78,23 +58,20 @@ def chiedi_a_gemini(dati):
         "2. Approccio operativo per M1, M5 e M15 nella sessione mattutina."
     )
 
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    res = requests.post(url, json=payload, timeout=30)
-    risposta = res.json()
+    for modello in ["gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-2.0-flash"]:
+        try:
+            risposta = client.models.generate_content(model=modello, contents=prompt)
+            if risposta and risposta.text:
+                return risposta.text
+        except Exception as e:
+            print(f"Tentativo con {modello} fallito: {e}")
 
-    primo_candidato = next(iter(risposta.get("candidates", [])), None)
-    if primo_candidato:
-        parti = primo_candidato.get("content", {}).get("parts", [])
-        prima_parte = next(iter(parti), None)
-        if prima_parte and "text" in prima_parte:
-            return prima_parte["text"]
-
-    return f"Errore risposta Gemini: {risposta}"
+    return "Impossibile ottenere risposta da Gemini."
 
 def invia_telegram(testo):
     token = os.environ["TELEGRAM_TOKEN"]
     chat_id = os.environ["TELEGRAM_CHAT_ID"]
-    url = f"https://telegram.org{token}/sendMessage"
+    url = "https://api." + "telegram.org" + f"/bot{token}/sendMessage"
     testo_sicuro = testo[:4000]
     res = requests.post(url, data={"chat_id": chat_id, "text": testo_sicuro}, timeout=30)
     print("Status Telegram:", res.status_code, res.text)
