@@ -12,7 +12,7 @@ BLOCCHI_VALUTE = {
 }
 
 def scarica_calendario_oggi():
-        url = "https://nfs." + "faireconomy.media" + "/ff_calendar_thisweek.json"
+    url = "https://nfs." + "faireconomy.media" + "/ff_calendar_thisweek.json"
     try:
         res = requests.get(url, timeout=15)
         if res.status_code != 200:
@@ -106,18 +106,20 @@ def invia_telegram(testo):
     if not testo:
         return
     token = os.environ["TELEGRAM_TOKEN"]
-    chat_id = os.environ["TELEGRAM_CHAT_ID"]
+    chat_ids = os.environ["TELEGRAM_CHAT_ID"].split(",")
     url = "https://api." + "telegram.org" + f"/bot{token}/sendMessage"
-    requests.post(url, data={"chat_id": chat_id, "text": testo[:4000]}, timeout=30)
+    for cid in chat_ids:
+        requests.post(url, data={"chat_id": cid.strip(), "text": testo[:4000]}, timeout=30)
 
 if __name__ == "__main__":
     ora_utc = datetime.now(timezone.utc).hour
+    minuto_utc = datetime.now(timezone.utc).minute
     medie = analizza_blocchi()
     cal = scarica_calendario_oggi()
     print("Medie volatilita:", medie)
 
     evento_github = os.environ.get("GITHUB_EVENT_NAME", "")
-    if ora_utc == 5 or evento_github == "workflow_dispatch":
+    if evento_github == "workflow_dispatch" or ora_utc == 5 or (ora_utc == 6 and minuto_utc < 20):
         messaggio = chiedi_a_gemini(medie, cal, solo_alert=False)
         invia_telegram(messaggio)
     else:
