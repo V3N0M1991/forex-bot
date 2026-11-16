@@ -12,7 +12,7 @@ BLOCCHI_VALUTE = {
 }
 
 def scarica_calendario_oggi():
-    url = "https://faireconomy.media"
+        url = "https://nfs." + "faireconomy.media" + "/ff_calendar_thisweek.json"
     try:
         res = requests.get(url, timeout=15)
         if res.status_code != 200:
