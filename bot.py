@@ -109,23 +109,30 @@ def invia_telegram(testo):
     chat_ids = os.environ["TELEGRAM_CHAT_ID"].split(",")
     url = "https://api." + "telegram.org" + f"/bot{token}/sendMessage"
     for cid in chat_ids:
-        requests.post(url, data={"chat_id": cid.strip(), "text": testo[:4000]}, timeout=30)
+        try:
+            requests.post(url, data={"chat_id": cid.strip(), "text": testo[:4000]}, timeout=30)
+        except Exception as e:
+            print("Errore invio Telegram:", e)
 
 if __name__ == "__main__":
-    ora_utc = datetime.now(timezone.utc).hour
-    minuto_utc = datetime.now(timezone.utc).minute
-    medie = analizza_blocchi()
-    cal = scarica_calendario_oggi()
-    print("Medie volatilita:", medie)
+    try:
+        ora_utc = datetime.now(timezone.utc).hour
+        minuto_utc = datetime.now(timezone.utc).minute
+        medie = analizza_blocchi()
+        cal = scarica_calendario_oggi()
+        print("Ora UTC:", ora_utc, "Minuto:", minuto_utc, "| Medie volatilita:", medie)
 
-    evento_github = os.environ.get("GITHUB_EVENT_NAME", "")
-    if evento_github == "workflow_dispatch" or ora_utc == 5 or (ora_utc == 6 and minuto_utc < 20):
-        messaggio = chiedi_a_gemini(medie, cal, solo_alert=False)
-        invia_telegram(messaggio)
-    else:
-        esplosioni = {k: v for k, v in medie.items() if v > 1.25}
-        if esplosioni:
-            messaggio = chiedi_a_gemini(medie, cal, solo_alert=True)
-            invia_telegram("⚡ ALERT VARIAZIONE FOREX ⚡\n\n" + messaggio)
+        # Alle 05:00 UTC (06:00 Italia, entro i primi 15 minuti) manda il briefing completo
+        if ora_utc == 5 and minuto_utc < 15:
+            messaggio = chiedi_a_gemini(medie, cal, solo_alert=False)
+            invia_telegram(messaggio)
         else:
-            print("Nessuna variazione rilevante: nessun messaggio inviato.")
+            # In tutti gli altri orari manda messaggio SOLO SE una valuta supera 1.25
+            esplosioni = {k: v for k, v in medie.items() if v > 1.25}
+            if esplosioni:
+                messaggio = chiedi_a_gemini(medie, cal, solo_alert=True)
+                invia_telegram("⚡ ALERT VARIAZIONE FOREX ⚡\n\n" + messaggio)
+            else:
+                print("Nessuna variazione rilevante: nessun messaggio inviato.")
+    except Exception as e:
+        print("Errore gestito:", e)
